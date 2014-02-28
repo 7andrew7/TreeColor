@@ -1,6 +1,7 @@
 
 import abc
 import collections
+import logging
 
 NUM_ATTRIBUTES = 4
 
@@ -10,6 +11,14 @@ class Node(object):
     @abc.abstractmethod
     def get_costs(self):
         """Return a dictionary of costs to product output with a given paritioning."""
+
+    @abc.abstractmethod
+    def get_color(self):
+        """Return the partition color."""
+
+    @abc.abstractmethod
+    def is_output_shuffled(self):
+        """Return whether the output must be shuffled."""
 
     @abc.abstractmethod
     def set_color(self, color):
@@ -23,6 +32,10 @@ class Node(object):
     def get_output_size(self, color):
         """Estimate output size for the operator."""
 
+    def __repr__(self):
+        return '%r(%r of %d, shuffle=%r)' % (self.__class__, self.get_color(), self.get_num_columns(),
+         self.shuffle_output)
+
 class ScanNode(Node):
     """Represents a 'scan' of a base table."""
 
@@ -31,6 +44,7 @@ class ScanNode(Node):
         self.num_columns = num_columns
         self.num_tuples = num_tuples
         self.color = None
+        self.shuffle_output = False
 
     def get_costs(self):
         costs = dict([(x, self.num_tuples) for x in range(self.num_columns)])
@@ -39,9 +53,18 @@ class ScanNode(Node):
 
         return costs
 
+    def get_color(self):
+        return self.color
+
+    def is_output_shuffled(self):
+        return self.shuffle_output
+
     def set_color(self, color):
         assert color in range(self.num_columns)
         self.color = color
+
+        if color not in self.partition_set:
+            self.shuffle_output = True
 
     def get_num_columns(self):
         return self.num_columns
@@ -62,9 +85,40 @@ class JoinNode(Node):
         self.right = right
         self.join_columns = join_columns
 
-    def get_costs(self):
-        pass
+        for x,y in self.join_columns:
+            assert x < y
+            assert y >= self.left.get_num_columns()
+            assert x < self.right.get_num_columns()
 
+    def get_costs(self):
+        self.costs = {}
+        left_costs = self.left.get_costs()
+        right_costs = self.right.get_costs()
+
+        # consider inputs partitioned on each pair of join attributes
+
+        for x,y in self.join_columns:
+            y_local = y - self.left.get_num_columns()
+            cost = left_costs[x] + right_costs[y_local]
+            self.costs[x] = cost
+            self.costs[y] = cost
+
+        # we can produce any other output partioning by adding a shuffle
+        min_cost = min(costs.itervalues())
+        shuffle_cost = self.get_output_size()
+        default_cost = min_cost + shuffle_cost
+
+        for x in range(self.get_num_columns()):
+            if not x in costs or costs[x] > default_cost:
+                costs[x] = default_cost
+
+        return costs
+
+    def set_color(self, color):
+        assert color in range(self.num_columns)
+        self.color = color
+
+        # color the children based 
     def get_num_columns(self):
         return left.get_num_columns() + right.get_num_columns()
 
@@ -75,3 +129,4 @@ class JoinNode(Node):
 if __name__ == '__main__':
     n = ScanNode({1,2})
     print n.get_costs()
+    print n
