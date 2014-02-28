@@ -20,7 +20,7 @@ class Node(object):
 
     @abc.abstractmethod
     def get_costs(self):
-        """Return a dictionary of costs to product output with a given paritioning."""
+        """Return a dictionary of costs to produce output with a given paritioning."""
 
     @abc.abstractmethod
     def set_color(self, color):
@@ -89,7 +89,7 @@ class JoinNode(Node):
             assert x < self.right.get_num_columns()
 
     def get_costs(self):
-        self.costs = {}
+        costs = {}
         left_costs = self.left.get_costs()
         right_costs = self.right.get_costs()
 
@@ -98,8 +98,8 @@ class JoinNode(Node):
         for x,y in self.join_columns:
             y_local = y - self.left.get_num_columns()
             cost = left_costs[x] + right_costs[y_local]
-            self.costs[x] = cost
-            self.costs[y] = cost
+            costs[x] = cost
+            costs[y] = cost
 
         # we can produce any other output partioning by adding a shuffle
         min_cost = min(costs.itervalues())
@@ -118,13 +118,19 @@ class JoinNode(Node):
 
         # color the children based 
     def get_num_columns(self):
-        return left.get_num_columns() + right.get_num_columns()
+        return self.left.get_num_columns() + self.right.get_num_columns()
 
     def get_output_size(self):
         # XXX totally made up
-        return left.get_output_size() + right.get_output_size()
+        return self.left.get_output_size() + self.right.get_output_size()
 
 if __name__ == '__main__':
-    n = ScanNode({1,2})
-    print n.get_costs()
-    print n
+    s1 = ScanNode(set(), num_columns=2)
+    s2 = ScanNode(set(), num_columns=2)
+    j1 = JoinNode(s1, s2, {(0,2),(1,3)})
+
+    s3 = ScanNode(set(), num_columns=2)
+    j2 = JoinNode(j1, s3, {(0, 4)})
+
+    print j2.get_costs()
+
