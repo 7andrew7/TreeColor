@@ -15,7 +15,7 @@ class Node(object):
     def set_color(self, color):
         """Set the partition attribute for the given node and all its descendents."""
 
-class ScanNode(object):
+class ScanNode(Node):
     """Represents a 'scan' of a base table."""
 
     def __init__(self, partition_set, num_columns=4, num_tuples=1000):
@@ -27,6 +27,8 @@ class ScanNode(object):
     def get_costs(self):
         costs = dict([(x, self.num_tuples) for x in range(self.num_columns)])
         costs.update(dict([(x, 0) for x in self.partition_set]))
+        costs[-1] = 0
+
         return costs
 
     def set_color(self, color):
