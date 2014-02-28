@@ -8,17 +8,19 @@ NUM_ATTRIBUTES = 4
 class Node(object):
     __metaclass__ = abc.ABCMeta
 
+    def __init__(self):
+        self.color = None
+        self.shuffle_output = False
+
+    def get_color(self):
+        return self.color
+
+    def is_output_shuffled(self):
+        return self.shuffle_output
+
     @abc.abstractmethod
     def get_costs(self):
         """Return a dictionary of costs to product output with a given paritioning."""
-
-    @abc.abstractmethod
-    def get_color(self):
-        """Return the partition color."""
-
-    @abc.abstractmethod
-    def is_output_shuffled(self):
-        """Return whether the output must be shuffled."""
 
     @abc.abstractmethod
     def set_color(self, color):
@@ -40,11 +42,11 @@ class ScanNode(Node):
     """Represents a 'scan' of a base table."""
 
     def __init__(self, partition_set, num_columns=4, num_tuples=1000):
+        Node.__init__(self)
+
         self.partition_set = partition_set
         self.num_columns = num_columns
         self.num_tuples = num_tuples
-        self.color = None
-        self.shuffle_output = False
 
     def get_costs(self):
         costs = dict([(x, self.num_tuples) for x in range(self.num_columns)])
@@ -52,12 +54,6 @@ class ScanNode(Node):
         costs[-1] = 0
 
         return costs
-
-    def get_color(self):
-        return self.color
-
-    def is_output_shuffled(self):
-        return self.shuffle_output
 
     def set_color(self, color):
         assert color in range(self.num_columns)
@@ -81,6 +77,8 @@ class JoinNode(Node):
         :type right: Node
         :type join_columns: set of join column two-tuples in sorted order
         """
+        Node.__init__(self)
+
         self.left = left
         self.right = right
         self.join_columns = join_columns
