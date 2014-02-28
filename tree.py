@@ -15,6 +15,10 @@ class Node(object):
     def set_color(self, color):
         """Set the partition attribute for the given node and all its descendents."""
 
+    @abc.abstractmethod
+    def get_output_size(self, color):
+        """Estimate output size for the operator."""
+
 class ScanNode(Node):
     """Represents a 'scan' of a base table."""
 
@@ -34,6 +38,9 @@ class ScanNode(Node):
     def set_color(self, color):
         assert color in range(self.num_columns)
         self.color = color
+
+    def get_output_size(self):
+        return self.num_tuples
 
 if __name__ == '__main__':
     n = ScanNode({1,2})
