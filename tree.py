@@ -3,6 +3,8 @@ import abc
 import collections
 import logging
 
+logging.basicConfig(level=logging.DEBUG)
+
 NUM_ATTRIBUTES = 4
 
 class Node(object):
@@ -62,6 +64,8 @@ class ScanNode(Node):
         if color not in self.partition_set:
             self.shuffle_output = True
 
+        logging.info("Setting color=%d for %r" % (color, self))
+
     def get_num_columns(self):
         return self.num_columns
 
@@ -93,30 +97,59 @@ class JoinNode(Node):
         left_costs = self.left.get_costs()
         right_costs = self.right.get_costs()
 
-        # consider inputs partitioned on each pair of join attributes
+        # Map from output color to required input colors from children
+        self.inputs = {}
 
+        # Map from output color to whether output must be shuffled.
+        self.require_shuffle = {}
+
+        # consider inputs partitioned on each pair of join attributes
+        min_cost = 10000000
+        min_tuple = None
+
+        # Cost of partitioning on a join column is simply the sum of the cost sof partitioning
+        # the children on the join column.
         for x,y in self.join_columns:
             y_local = y - self.left.get_num_columns()
             cost = left_costs[x] + right_costs[y_local]
             costs[x] = cost
             costs[y] = cost
 
+            self.inputs[x] = (x,y_local)
+            self.inputs[y] = (x,y_local)
+            self.require_shuffle[x] = False
+            self.require_shuffle[y] = False
+
+            if cost < min_cost:
+                min_cost = cost
+                min_tuple = (x,y_local)
+
         # we can produce any other output partioning by adding a shuffle
-        min_cost = min(costs.itervalues())
-        shuffle_cost = self.get_output_size()
-        default_cost = min_cost + shuffle_cost
+        default_cost = min_cost + self.get_output_size()
 
         for x in range(self.get_num_columns()):
             if not x in costs or costs[x] > default_cost:
                 costs[x] = default_cost
+                self.inputs[x] = min_tuple
+                self.require_shuffle[x] = True
 
         return costs
 
     def set_color(self, color):
-        assert color in range(self.num_columns)
-        self.color = color
+        assert color in range(self.get_num_columns())
 
-        # color the children based 
+        # If the output color matches a join column, push the corresponding color
+        # into the children.
+        self.color = color
+        self.shuffle_output = self.require_shuffle[color]
+
+        logging.info("Setting color=%d for %r" % (color, self))
+
+        child_colors = self.inputs[color]
+        self.left.set_color(child_colors[0])
+        self.right.set_color(child_colors[1])
+
+
     def get_num_columns(self):
         return self.left.get_num_columns() + self.right.get_num_columns()
 
@@ -132,5 +165,13 @@ if __name__ == '__main__':
     s3 = ScanNode(set(), num_columns=2)
     j2 = JoinNode(j1, s3, {(0, 4)})
 
-    print j2.get_costs()
+    logging.info(j2.get_costs())
+    min_cost = 10000000
+    min_color = None
 
+    for color, cost in j2.get_costs().iteritems():
+        if cost < min_cost:
+            min_cost = cost
+            min_color = color
+
+    j2.set_color(min_color)
