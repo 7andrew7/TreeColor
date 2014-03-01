@@ -64,7 +64,7 @@ class ScanNode(Node):
         if color not in self.partition_set:
             self.shuffle_output = True
 
-        logging.info("Setting color=%d for %r" % (color, self))
+        logging.info("setting color=%d for %r" % (color, self))
 
     def get_num_columns(self):
         return self.num_columns
@@ -143,7 +143,7 @@ class JoinNode(Node):
         self.color = color
         self.shuffle_output = self.require_shuffle[color]
 
-        logging.info("_ color=%d for %r" % (color, self))
+        logging.info("setting color=%d for %r" % (color, self))
 
         child_colors = self.inputs[color]
         self.left.set_color(child_colors[0])
