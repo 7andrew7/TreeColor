@@ -110,19 +110,19 @@ class JoinNode(Node):
         # Cost of partitioning on a join column is simply the sum of the cost sof partitioning
         # the children on the join column.
         for x,y in self.join_columns:
-            y_local = y - self.left.get_num_columns()
-            cost = left_costs[x] + right_costs[y_local]
+            y_in = y - self.left.get_num_columns()
+            cost = left_costs[x] + right_costs[y_in]
             costs[x] = cost
             costs[y] = cost
 
-            self.inputs[x] = (x,y_local)
-            self.inputs[y] = (x,y_local)
+            self.inputs[x] = (x,y_in)
+            self.inputs[y] = (x,y_in)
             self.require_shuffle[x] = False
             self.require_shuffle[y] = False
 
             if cost < min_cost:
                 min_cost = cost
-                min_tuple = (x,y_local)
+                min_tuple = (x,y_in)
 
         # we can produce any other output partioning by adding a shuffle
         default_cost = min_cost + self.get_output_size()
@@ -143,7 +143,7 @@ class JoinNode(Node):
         self.color = color
         self.shuffle_output = self.require_shuffle[color]
 
-        logging.info("Setting color=%d for %r" % (color, self))
+        logging.info("_ color=%d for %r" % (color, self))
 
         child_colors = self.inputs[color]
         self.left.set_color(child_colors[0])
