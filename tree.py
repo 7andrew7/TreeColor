@@ -107,7 +107,7 @@ class JoinNode(Node):
         min_cost = 10000000
         min_tuple = None
 
-        # Cost of partitioning on a join column is simply the sum of the cost sof partitioning
+        # Cost of partitioning on a join column is simply the sum of the cost of partitioning
         # the children on the join column.
         for x,y in self.join_columns:
             y_in = y - self.left.get_num_columns()
@@ -124,7 +124,7 @@ class JoinNode(Node):
                 min_cost = cost
                 min_tuple = (x,y_in)
 
-        # we can produce any other output partioning by adding a shuffle
+        # we can produce any output partioning by adding a shuffle to the minimum cost output
         default_cost = min_cost + self.get_output_size()
 
         for x in range(self.get_num_columns()):
