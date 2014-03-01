@@ -40,6 +40,19 @@ class Node(object):
         return '%r(%r of %d, shuffle=%r)' % (self.__class__, self.get_color(), self.get_num_columns(),
          self.shuffle_output)
 
+    def get_optimal_color(self):
+        """Return the output color corresponding to the cheapest plan."""
+        min_cost = 10000000
+        min_color = None
+
+        costs = self.get_costs()
+        for color, cost in costs.iteritems():
+            if cost < min_cost:
+                min_cost = cost
+                min_color = color
+
+        return min_color
+
 class ScanNode(Node):
     """Represents a 'scan' of a base table."""
 
@@ -165,13 +178,4 @@ if __name__ == '__main__':
     s3 = ScanNode(set(), num_columns=2)
     j2 = JoinNode(j1, s3, {(0, 4)})
 
-    logging.info(j2.get_costs())
-    min_cost = 10000000
-    min_color = None
-
-    for color, cost in j2.get_costs().iteritems():
-        if cost < min_cost:
-            min_cost = cost
-            min_color = color
-
-    j2.set_color(min_color)
+    j2.set_color(j2.get_optimal_color())
